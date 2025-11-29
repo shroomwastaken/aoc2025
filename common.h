@@ -29,11 +29,8 @@
 	(da)->items[(da)->len++] = elem;                                \
 } while (0)
 
-// im only going to do inserts for inside the array for now
-// will update if needed later
 #define da_insert(da, elem, idx) do {                               \
-	assert(idx >= 0 && idx <= (da)->len);                           \
-	if (idx == (da)->len) {                                         \
+	if (idx >= (da)->len) {                                         \
 		da_append((da), elem);                                      \
 		continue;                                                   \
 	}                                                               \
