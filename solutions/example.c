@@ -7,25 +7,18 @@
 	part 2 calculates the product of the numbers
 */
 
-typedef struct {
-	uint32_t arr_len;
-	uint32_t arr_size;
-	uint32_t* arr;
-} input_t;
+da_struct(uint32_t, input_t)
 
 int gather_input(const char* filename, input_t* out) {
 	FILE* f_in = fopen(filename, "r");
 	if (f_in == NULL) { return 1; }
 
-	out->arr_size = 2;
-	out->arr_len = 0;
-	out->arr = malloc(out->arr_size * sizeof(int32_t));
-	while (fscanf(f_in, "%d", &out->arr[out->arr_len]) == 1) {
-		out->arr_len++;
-		if (out->arr_len >= out->arr_size) {
-			out->arr_size *= 2;
-			out->arr = realloc(out->arr, out->arr_size * sizeof(int32_t));
-		}
+	da_init(out);
+
+	uint32_t item;
+
+	while (fscanf(f_in, "%d", &item) == 1) {
+		da_append(out, item);
 	}
 
 	fclose(f_in);
@@ -35,8 +28,8 @@ int gather_input(const char* filename, input_t* out) {
 void part1(void* inp) {
 	input_t* input = (input_t*)inp;
 	uint32_t res = 0;
-	for (uint32_t i = 0; i < input->arr_len; i++) {
-		res += input->arr[i];
+	for (uint32_t i = 0; i < input->len; i++) {
+		res += input->items[i];
 	}
 
 	printf("%u\n", res);
@@ -46,8 +39,8 @@ void part1(void* inp) {
 void part2(void* inp) {
 	input_t* input = (input_t*)inp;
 	uint32_t res = 1;
-	for (uint32_t i = 0; i < input->arr_len; i++) {
-		res *= input->arr[i];
+	for (uint32_t i = 0; i < input->len; i++) {
+		res *= input->items[i];
 	}
 
 	printf("%u\n", res);
@@ -74,6 +67,6 @@ int main(int argc, char** argv) {
 	time = time_function(part2, &input);
 	printf("took %.10lf seconds to run part 2\n", time);
 
-	free(input.arr);
+	free(input.items);
 	return 0;
 }
