@@ -21,6 +21,10 @@
 	(da)->items = malloc(2*sizeof((da)->items[0])); \
 } while (0)
 
+#define da_free(da) do { \
+	free((da)->items);   \
+} while (0)
+
 #define da_append(da, elem) do {                                    \
 	if ((da)->len >= (da)->cap) {                                   \
 		(da)->cap *= 2;                                             \
