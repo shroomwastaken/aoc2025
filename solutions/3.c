@@ -22,6 +22,8 @@ int gather_input(const char* filename, input_t* out) {
 		da_init(&(jolts));
 	}
 
+	da_free(&(jolts)); // last jolts isnt needed
+
 	fclose(f_in);
 	return 0;
 }
@@ -50,33 +52,33 @@ void part2(void* inp) {
 	input_t* input = (input_t*)inp;
 	uint64_t res = 0;
 
-	// choose last 12 digits,
-	// maximize position and value of each digit
 	for (uint32_t i = 0; i < input->len; i++) {
 		jolt_t bank = input->items[i];
-		unsigned char pos[12];
+
+		// choose last 12 digits
+		unsigned char pos[12] = {0};
 		for (uint32_t j = bank.len - 12; j < bank.len; j++) {
 			pos[j - bank.len + 12] = j;
-			printf("%u: %u ", j - bank.len + 12, j);
 		}
-		putchar('\n');
 
-
-
-		// go through all previous numbers, chose one such that:
-		//  1) its highest possible
-		//  2) its as far along as possible
-		//     (position isn't taken and is more than max(pos))
-		uint32_t mpos = 0;
+		int32_t mpos = -1; // maximum position
+		// for each of the 12 needed digits
 		for (uint32_t j = 0; j < 12; j++) {
-			uint32_t maxd = bank.items[12-j];
-			for (int32_t idx = bank.len-(12-j)-1; idx >= 0 && idx > mpos; idx--) {
-				if (bank.items[idx] >= maxd && idx > mpos) {
+			// maximum found value for this digit
+			uint32_t maxd = bank.items[pos[j]];
+			// loop from current digit (12-j is because they're
+			// stored in reverse order) until reaching the position
+			// before the previous taken position
+			for (int32_t idx = bank.len-(12-j); idx > mpos; idx--) {
+				// if we found a better number
+				// OR an equal number at a better position
+				if (bank.items[idx] >= maxd) {
 					maxd = bank.items[idx];
-					mpos = idx;
 					pos[j] = idx;
 				}
 			}
+			// update best position
+			mpos = pos[j];
 		}
 
 		// compute joltage
@@ -84,7 +86,6 @@ void part2(void* inp) {
 		for (uint32_t j = 1; j < 13; j++) {
 			jolt += bank.items[pos[j-1]] * powl(10, (12-j));
 		}
-		printf("joltage %u: %lu\n", i, jolt);
 		res += jolt;
 	}
 
