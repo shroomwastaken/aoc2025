@@ -76,14 +76,22 @@ void part2(void* inp) {
 
 	qsort(input->rs.items, input->rs.len, sizeof(range_t), cmp_starts);
 
-	range_t range;
-	for (uint64_t i = 0; i < input->rs.len; i++) {
-		range = input->rs.items[i];
-		while (i < input->rs.len - 1 && range.end >= input->rs.items[i + 1].start) {
-			range.end = input->rs.items[i + 1].end;
-			i++;
+	// adjust start and end positions
+	// there's definitely a more efficient way to do this
+	// but idrc at this point in time
+	for (uint64_t i = 0; i < input->rs.len-1; i++) {
+		if (input->rs.items[i].end >= input->rs.items[i + 1].start) {
+			input->rs.items[i+1].start = input->rs.items[i].end + 1;
+			if (input->rs.items[i].end >= input->rs.items[i + 1].end) {
+				input->rs.items[i + 1].end = input->rs.items[i + 1].start - 1;
+			}
 		}
-		res += range.end - range.start + 1;
+	}
+
+	for (uint64_t i = 0; i < input->rs.len; i++) {
+		if (input->rs.items[i].end >= input->rs.items[i].start) {
+			res += input->rs.items[i].end - input->rs.items[i].start + 1;
+		}
 	}
 
 	printf("part 2 answer: %lu\n", res);
