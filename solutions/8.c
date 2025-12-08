@@ -2,19 +2,10 @@
 #include <math.h>
 
 typedef struct {
-	int32_t x, y, z;
+	int64_t x, y, z;
 } box_t;
 
-// pair of indexes
-// marked is for getting circuits
-typedef struct {
-	uint64_t a, b;
-	bool marked;
-} conn_t;
-
 da_struct(box_t, input_t)
-da_struct(conn_t, conns_t)
-da_struct(uint32_t, idxarr_t)
 
 int gather_input(const char* filename, input_t* out) {
 	FILE* f_in = fopen(filename, "r");
@@ -36,138 +27,89 @@ int gather_input(const char* filename, input_t* out) {
 	return 0;
 }
 
-double sld(box_t a, box_t b) {
-	return sqrt(pow((double)(a.x - b.x), 2) +
-				pow((double)(a.y - b.y), 2) +
-				pow((double)(a.z - b.z), 2));
+int64_t sld(box_t a, box_t b) {
+	int64_t dx = a.x - b.x;
+	int64_t dy = a.y - b.y;
+	int64_t dz = a.z - b.z;
+	return dx*dx + dy*dy + dz*dz;
 }
 
-void print_box(box_t b) {
-	printf("[%d %d %d]", b.x, b.y, b.z);
-}
+typedef struct {
+	int64_t d;
+	uint32_t a, b;
+	bool marked;
+} dist_t;
 
-bool are_connected(uint32_t a, uint32_t b, conns_t* conns) {
-	for (uint64_t i = 0; i < conns->len; i++) {
-		if (conns->items[i].a == a && conns->items[i].b == b) {
-			return true;
-		} else if (conns->items[i].a == b && conns->items[i].b == a) {
-			return true;
-		}
-	}
-	return false;
-}
-
-// sets a and b to indices of closest unconnected boxes
-// returns true if found at least one pair
-bool closest(input_t* input, uint32_t* a, uint32_t* b, conns_t* conns) {
-	bool done = false;
-	double mind = 10000000, dist = 0;
-	for (uint32_t i = 0; i < input->len - 1; i++) {
-		for (uint32_t j = i + 1; j < input->len; j++) {
-			dist = sld(input->items[i], input->items[j]);
-			bool conn = are_connected(i, j, conns);
-			if (dist < mind && !conn) {
-				done = true;
-				*a = i;
-				*b = j;
-				mind = dist;
-			}
-		}
-	}
-	return done;
-}
-
-// slow as hell but i dont have a hashset
-void add_unique(idxarr_t* arr, uint32_t elem) {
-	for (uint32_t i = 0; i < arr->len; i++) {
-		if (arr->items[i] == elem) return;
-	}
-	da_append(arr, elem);
+int cmp_dists(const void* a, const void* b) {
+	dist_t* da = (dist_t*)a;
+	dist_t* db = (dist_t*)b;
+	if (da->d < db->d) return -1;
+	else if (da->d == db->d) return 0;
+	return 1;
 }
 
 void part1(void* inp) {
 	input_t* input = (input_t*)inp;
 	uint64_t res = 0;
 
-	conns_t conns = {0};
-	da_init(&(conns));
-
-	uint32_t a, b; conn_t conn;
-	bool good = true;
-	uint32_t count = 0;
-	while ((good = closest(input, &a, &b, &conns)) && count < 1000) {
-		count++;
-		conn = (conn_t){.a = a, .b = b, false};
-		da_append(&(conns), conn);
+	dist_t* dists = calloc(input->len*input->len, sizeof(dist_t));
+	uint32_t idx = 0;
+	for (uint32_t i = 0; i < input->len; i++) {
+		for (uint32_t j = i + 1; j < input->len; j++) {
+			dists[idx++] = (dist_t) {
+				.d = sld(input->items[i], input->items[j]),
+				.a = i, .b = j, .marked = false
+			};
+		}
 	}
+	qsort(dists, idx, sizeof(dist_t), cmp_dists);
 
-	idxarr_t* a1 = malloc(sizeof(idxarr_t)); da_init(a1);
-	idxarr_t* a2 = malloc(sizeof(idxarr_t)); da_init(a2);
-	idxarr_t* circ = malloc(sizeof(idxarr_t)); da_init(circ);
-	idxarr_t* tmp;
-	bool done = false, new_circ = true;
-	uint32_t circ_size, c1 = 0, c2 = 0, c3 = 0;
+	uint64_t c1 = 0, c2 = 0, c3 = 0, c = 0;
 
-	while (true) {
-		if (new_circ) {
-			done = true;
-			for (uint32_t i = 0; i < conns.len; i++) {
-				if (!conns.items[i].marked) {
-					da_append(a1, conns.items[i].a);
-					da_append(a1, conns.items[i].b);
-					add_unique(circ, conns.items[i].a);
-					add_unique(circ, conns.items[i].b);
-					done = false;
-					conns.items[i].marked = true;
-					break;
+	// 10 for example, 1000 for input
+	uint32_t imax = 1000;
+	for (uint32_t i = 0; i < imax; i++) {
+		if (dists[i].marked) continue;
+		hashset_t* circ = hset_init(sizeof(uint32_t), 2048);
+		hset_add(circ, &dists[i].a); hset_add(circ, &dists[i].b);
+		dists[i].marked = true;
+		bool did = false;
+		do {
+			did = false;
+			hashset_iter_t* circ_iter = hset_iter_create(circ);
+			hashset_iter_t* circ_iter_next = circ_iter;
+			uint32_t val = 0;
+			while (circ_iter_next != NULL) {
+				memcpy(&val, circ_iter_next->value, sizeof(uint32_t));
+				for (uint32_t j = 0; j < imax; j++) {
+					if (dists[j].marked) continue;
+					if (dists[j].a == val) {
+						hset_add(circ, &dists[j].b);
+						dists[j].marked = true; did = true;
+					}
+					else if (dists[j].b == val) {
+						hset_add(circ, &dists[j].a);
+						dists[j].marked = true; did = true;
+					}
 				}
+				circ_iter_next = circ_iter_next->next;
 			}
-			if (done) break;
-			new_circ = false;
-			circ_size = a1->len;
+			hset_iter_free(circ_iter);
+		} while (did);
+		c = circ->count;
+		if (c > c1) {
+			c3 = c2; c2 = c1; c1 = c;
+		} else if (c < c1 && c > c2) {
+			c3 = c2; c2 = c;
+		} else if (c < c2 && c > c3) {
+			c3 = c;
 		}
-		for (uint32_t i = 0; i < a1->len; i++) {
-			for (uint32_t j = 0; j < conns.len; j++) {
-				if (conns.items[j].marked) continue;
-				if (conns.items[j].a == a1->items[i] ||
-					conns.items[j].b == a1->items[i]) {
-					da_append(a2, conns.items[j].a);
-					da_append(a2, conns.items[j].b);
-					add_unique(circ, conns.items[j].a);
-					add_unique(circ, conns.items[j].b);
-					conns.items[j].marked = true;
-				}
-			}
-		}
-		if (a2->len == 0) {
-			circ_size = circ->len;
-			new_circ = true;
-			if (circ_size > c1) {
-				c3 = c2; c2 = c1; c1 = circ_size;
-			} else if (circ_size < c1 && circ_size > c2) {
-				c3 = c2; c2 = circ_size;
-			} else if (circ_size < c2 && circ_size > c3) {
-				c3 = circ_size;
-			}
-			da_free(a1);
-			da_init(a1);
-			da_free(a2);
-			da_init(a2);
-			da_free(circ);
-			da_init(circ);
-			continue;
-		}
-		tmp = a1;
-		a1 = a2;
-		a2 = tmp;
-		da_free(a2);
-		da_init(a2);
+		hset_free(circ);
 	}
 
 	res = c1 * c2 * c3;
 	printf("part 1 answer: %lu\n", res);
-	free(a1);
-	free(a2);
+	free(dists);
 	return;
 }
 
