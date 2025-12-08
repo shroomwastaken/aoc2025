@@ -3,13 +3,14 @@
 hashset_t* hset_init(uint64_t sz, uint64_t cap) {
 	hashset_t* hset = malloc(sz*cap);
 	if (hset == NULL) return NULL;
+	hset->count = 0;
 	hset->items = calloc(cap, sizeof(void*));
 	hset->sz = sz;
 	hset->cap = cap;
 	return hset;
 }
 
-uint64_t djb2(void* elem, uint64_t sz) {
+static uint64_t djb2(void* elem, uint64_t sz) {
 	uint64_t hash = 5381;
 	unsigned char* data = (unsigned char*)elem;
 	for (uint64_t i = 0; i < sz; i++) {
@@ -33,6 +34,7 @@ void hset_add(hashset_t* hset, void* elem) {
 	}
 	hset->items[idx] = malloc(hset->sz);
 	memcpy(hset->items[idx], elem, hset->sz);
+	hset->count++;
 	return;
 }
 
@@ -49,6 +51,7 @@ bool hset_remove(hashset_t* hset, void* elem) {
 	if (hset->items[idx] == NULL) return false;
 	free(hset->items[idx]);
 	hset->items[idx] = NULL;
+	hset->count--;
 	return true;
 }
 
@@ -71,4 +74,38 @@ void hset_free(hashset_t* hset) {
 		free(hset->items[i]);
 	free(hset->items);
 	free(hset);
+}
+
+static void hset_iter_append(hashset_iter_t* hset_iter, void* value) {
+	hashset_iter_t* n = malloc(sizeof(hashset_iter_t));
+	n->sz = hset_iter->sz;
+	n->value = value;
+	n->next = NULL;
+	while (hset_iter->next != NULL) hset_iter = hset_iter->next;
+	hset_iter->next = n;
+	return;
+}
+
+hashset_iter_t* hset_iter_create(hashset_t* hset) {
+	hashset_iter_t* hset_iter = malloc(sizeof(hashset_iter_t));
+	hset_iter->sz = hset->sz;
+	hset_iter->value = NULL;
+	hset_iter->next = NULL;
+	for (uint64_t i = 0; i < hset->cap; i++) {
+		if (hset->items[i] != NULL) {
+			if (hset_iter->value == NULL) {
+				hset_iter->value = hset->items[i];
+			}
+			else hset_iter_append(hset_iter, hset->items[i]);
+		}
+	}
+	return hset_iter;
+}
+
+void hset_iter_free(hashset_iter_t* hset_iter) {
+	while (hset_iter != NULL) {
+		hashset_iter_t* tmp = hset_iter;
+		hset_iter = hset_iter->next;
+		free(tmp);
+	}
 }
