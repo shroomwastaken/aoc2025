@@ -1,5 +1,5 @@
 # aoc2025
-my solutions for aoc2025, written in c
+my solutions for aoc2025, written in c without the use of any external dependencies. (only stdlib is used)
 
 ## building
 ```
