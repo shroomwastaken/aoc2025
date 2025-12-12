@@ -69,11 +69,23 @@ bool hset_contains(hashset_t* hset, void* elem) {
 	return true;
 }
 
+// a = a | b
+// assumes a and b are hashsets of the same type
+void hset_union(hashset_t* a, hashset_t* b) {
+	hashset_iter_t* b_iter = hset_iter_create(b);
+	while (b_iter != NULL) {
+		hset_add(a, b_iter->value);
+		b_iter = b_iter->next;
+	}
+	return;
+}
+
 void hset_free(hashset_t* hset) {
 	for (uint64_t i = 0; i < hset->cap; i++)
 		free(hset->items[i]);
 	free(hset->items);
 	free(hset);
+	return;
 }
 
 static void hset_iter_append(hashset_iter_t* hset_iter, void* value) {
@@ -108,4 +120,5 @@ void hset_iter_free(hashset_iter_t* hset_iter) {
 		hset_iter = hset_iter->next;
 		free(tmp);
 	}
+	return;
 }

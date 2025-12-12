@@ -46,4 +46,11 @@
 	(da)->len++;                                                    \
 } while (0)
 
+#define da_remove(da, idx) do {                        \
+	if (idx >= (da)->len) continue;                    \
+	memmove(&(da)->items[idx], &(da)->items[idx + 1],  \
+		((da)->len - idx - 1)*sizeof((da)->items[0])); \
+	(da)->len--;                                       \
+} while (0)
+
 #endif // DA_H

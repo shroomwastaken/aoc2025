@@ -18,6 +18,7 @@ hashset_t* hset_init(uint64_t sz, uint64_t cap);
 void hset_add(hashset_t* hset, void* elem);
 bool hset_remove(hashset_t* hset, void* elem);
 bool hset_contains(hashset_t* hset, void* elem);
+void hset_union(hashset_t* a, hashset_t* b);
 void hset_free(hashset_t* hset);
 
 typedef struct hashset_iter_t {
