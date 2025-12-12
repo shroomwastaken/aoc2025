@@ -113,17 +113,69 @@ void part1(void* inp) {
 	return;
 }
 
-/*
+da_struct(hashset_t*, circuits_t)
+
+#define NOT_FOUND 0xFFFFFFFF
+uint32_t find_box_in_circuits(circuits_t* circs, uint32_t idx) {
+	for (uint32_t i = 0; i < circs->len; i++) {
+		hashset_iter_t* circ_iter = hset_iter_create(circs->items[i]);
+		while (circ_iter != NULL) {
+			if (*(uint32_t*)circ_iter->value == idx) {
+				hset_iter_free(circ_iter); return i;
+			}
+			circ_iter = circ_iter->next;
+		}
+	}
+	return NOT_FOUND;
+}
+
 void part2(void* inp) {
 	input_t* input = (input_t*)inp;
 	uint64_t res = 0;
 
-	// solution...
+	dist_t* dists = calloc(input->len*input->len, sizeof(dist_t));
+	uint32_t idx = 0;
+	for (uint32_t i = 0; i < input->len; i++) {
+		for (uint32_t j = i + 1; j < input->len; j++) {
+			dists[idx++] = (dist_t) {
+				.d = sld(input->items[i], input->items[j]),
+				.a = i, .b = j, .marked = false
+			};
+		}
+	}
+	qsort(dists, idx, sizeof(dist_t), cmp_dists);
 
-	printf("part 2 answer: %u\n", res);
+	circuits_t circs = {0}; da_init(&(circs));
+
+	for (uint32_t i = 0; i < idx; i++) {
+		uint32_t a_idx = find_box_in_circuits(&circs, dists[i].a);
+		uint32_t b_idx = find_box_in_circuits(&circs, dists[i].b);
+		if (a_idx == NOT_FOUND && b_idx == NOT_FOUND) {
+			hashset_t* new_circ = hset_init(sizeof(uint32_t), input->len);
+			hset_add(new_circ, &dists[i].a);
+			hset_add(new_circ, &dists[i].b);
+			da_append(&(circs), new_circ);
+		} else if (a_idx != NOT_FOUND && b_idx == NOT_FOUND) {
+			hset_add(circs.items[a_idx], &dists[i].b);
+		} else if (a_idx == NOT_FOUND && b_idx != NOT_FOUND) {
+			hset_add(circs.items[b_idx], &dists[i].a);
+		} else if (a_idx != b_idx) {
+			hset_union(circs.items[a_idx], circs.items[b_idx]);
+			hset_free(circs.items[b_idx]);
+			da_remove(&(circs), b_idx);
+		}
+
+		if (circs.len == 1 && circs.items[0]->count == input->len) {
+			res = input->items[dists[i].a].x *
+				input->items[dists[i].b].x;
+			break;
+		}
+	}
+
+	printf("part 2 answer: %lu\n", res);
+	free(dists);
 	return;
 }
-*/
 
 int main(int argc, char** argv) {
 	if (argc != 2) {
@@ -142,8 +194,8 @@ int main(int argc, char** argv) {
 	time = time_function(part1, &input);
 	printf("took %.10lf seconds to run part 1\n", time);
 
-	// time = time_function(part2, &input);
-	// printf("took %.10lf seconds to run part 2\n", time);
+	time = time_function(part2, &input);
+	printf("took %.10lf seconds to run part 2\n", time);
 
 	da_free(&(input));
 
