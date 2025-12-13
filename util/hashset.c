@@ -73,10 +73,12 @@ bool hset_contains(hashset_t* hset, void* elem) {
 // assumes a and b are hashsets of the same type
 void hset_union(hashset_t* a, hashset_t* b) {
 	hashset_iter_t* b_iter = hset_iter_create(b);
-	while (b_iter != NULL) {
-		hset_add(a, b_iter->value);
-		b_iter = b_iter->next;
+	hashset_iter_t* copy = b_iter;
+	while (copy != NULL) {
+		hset_add(a, copy->value);
+		copy = copy->next;
 	}
+	hset_iter_free(b_iter);
 	return;
 }
 

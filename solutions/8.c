@@ -119,12 +119,14 @@ da_struct(hashset_t*, circuits_t)
 uint32_t find_box_in_circuits(circuits_t* circs, uint32_t idx) {
 	for (uint32_t i = 0; i < circs->len; i++) {
 		hashset_iter_t* circ_iter = hset_iter_create(circs->items[i]);
-		while (circ_iter != NULL) {
-			if (*(uint32_t*)circ_iter->value == idx) {
+		hashset_iter_t* copy = circ_iter;
+		while (copy != NULL) {
+			if (*(uint32_t*)copy->value == idx) {
 				hset_iter_free(circ_iter); return i;
 			}
-			circ_iter = circ_iter->next;
+			copy = copy->next;
 		}
+		hset_iter_free(circ_iter);
 	}
 	return NOT_FOUND;
 }
@@ -174,6 +176,8 @@ void part2(void* inp) {
 
 	printf("part 2 answer: %lu\n", res);
 	free(dists);
+	hset_free(circs.items[0]);
+	da_free(&(circs));
 	return;
 }
 
