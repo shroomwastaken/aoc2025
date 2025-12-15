@@ -106,5 +106,8 @@ int main(int argc, char** argv) {
 	time = time_function(part2, &input);
 	printf("took %.10lf seconds to run part 2\n", time);
 
+	da_free(&(input.r_start));
+	da_free(&(input.r_end));
+
 	return 0;
 }

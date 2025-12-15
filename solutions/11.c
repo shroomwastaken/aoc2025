@@ -81,18 +81,6 @@ uint32_t find_idx(input_t* input, char* n) {
 	return -1;
 }
 
-void print_graph(const graph_t* g) {
-	for (int v = 0; v < g->v; v++) {
-		printf("%d:", v);
-		edge_t* e = g->adj[v];
-		while (e != NULL) {
-			printf(" %d", e->to);
-			e = e->next;
-		}
-		printf("\n");
-	}
-}
-
 // idx is the node we start from
 uint64_t dfs(input_t* input, graph_t* g, uint32_t idx, char* target) {
 	if (cmp_names(input->items[idx].in, target)) return 1;
@@ -113,6 +101,7 @@ void part1(void* inp) {
 		printf("this is part 2's example! (or just bad file)\n");
 		return;
 	}
+
 	// add dummy node out
 	char* out_name = strdup("out");
 	dest_t dest = {0};
@@ -128,6 +117,16 @@ void part1(void* inp) {
 
 	res = dfs(input, &graph, find_idx(input, "you"), "out");
 	printf("part 1 answer: %lu\n", res);
+
+	for (uint32_t i = 0; i < graph.v; i++) {
+		edge_t* copy = graph.adj[i];
+		while (copy != NULL) {
+			edge_t* tmp = copy->next;
+			free(copy); copy = tmp;
+		}
+	}
+	free(graph.adj);
+
 	return;
 }
 
@@ -136,11 +135,11 @@ uint64_t cache[3000];
 
 uint64_t dfs2(input_t* input, graph_t* g, uint32_t idx,
 	bool has_fft, bool has_dac) {
-	if (cache[(idx<<2) | ((has_fft ? 1 : 0) << 1) | (has_dac ? 1 : 0)] != NOPE)
-		return cache[(idx<<2) | ((has_fft ? 1 : 0) << 1) | (has_dac ? 1 : 0)];
+	if (cache[(idx<<2) | (has_fft << 1) | (has_dac)] != NOPE)
+		return cache[(idx<<2) | (has_fft << 1) | (has_dac)];
 	if (cmp_names(input->items[idx].in, "out")) {
-		cache[(idx<<2) | ((has_fft ? 1 : 0) << 1) | (has_dac ? 1 : 0)] = (has_fft && has_dac) ? 1 : 0;
-		return (has_fft && has_dac) ? 1 : 0;
+		cache[(idx<<2) | (has_fft << 1) | (has_dac)] = (has_fft && has_dac) ? 1 : 0;
+		return has_fft && has_dac;
 	}
 	uint64_t res = 0;
 	edge_t* outgoing = g->adj[idx];
@@ -154,8 +153,7 @@ uint64_t dfs2(input_t* input, graph_t* g, uint32_t idx,
 		}
 		outgoing = outgoing->next;
 	}
-	//printf("setting cache %u to %lu", (idx<<2) | ((has_fft ? 1 : 0) << 1) | (has_dac ? 1 : 0), res);
-	cache[(idx<<2) | ((has_fft ? 1 : 0) << 1) | (has_dac ? 1 : 0)] = res;
+	cache[(idx<<2) | (has_fft << 1) | (has_dac)] = res;
 	return res;
 }
 
@@ -180,6 +178,16 @@ void part2(void* inp) {
 
 	res = dfs2(input, &graph, find_idx(input, "svr"), false, false);
 	printf("part 2 answer: %lu\n", res);
+
+	for (uint32_t i = 0; i < graph.v; i++) {
+		edge_t* copy = graph.adj[i];
+		while (copy != NULL) {
+			edge_t* tmp = copy->next;
+			free(copy); copy = tmp;
+		}
+	}
+	free(graph.adj);
+
 	return;
 }
 
